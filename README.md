@@ -47,3 +47,21 @@ integration.
   #1692). Single plugs (HS103 etc.) are unaffected.
 - Pinned to HA core 2026.7.0's integration code. A future HA core update may
   drift; re-sync the integration files if entities break after a core update.
+
+
+## v2026.7.0.1 — survives restarts
+
+The initial version restored the devices, but they broke again on the next HA
+restart. Cause: the KLAP v2 fallback in the vendored python-kasa only fires when
+**real credentials** are present; stock HA keeps credentials in memory only and
+relies on the per-device `credentials_hash` for reconnects, and a hash-only
+reconnect can't do KLAP v2 (and the persisted hash is the v1 hash regardless).
+So after any restart, auth failed until a manual re-auth.
+
+Fix: this build persists the cloud credentials to HA's standard `Store`
+(`.storage/tplink_klapv2_credentials`) so `get_credentials()` returns them after
+a restart, making the real-credential v2 path fire on every reconnect. Re-auth
+once after installing; it survives restarts thereafter.
+
+Note: the credential is stored in HA's `.storage` in plaintext (same as other
+integrations that cache cloud creds). Removed when you remove this component.

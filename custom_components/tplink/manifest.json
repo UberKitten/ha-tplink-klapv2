@@ -315,6 +315,6 @@
   "requirements": [
     "python-kasa[speedups]==0.10.2"
   ],
-  "version": "2026.7.0",
+  "version": "2026.7.0.1",
   "issue_tracker": "https://github.com/UberKitten/ha-tplink-klapv2/issues"
 }

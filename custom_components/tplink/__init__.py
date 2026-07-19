@@ -42,6 +42,7 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -287,21 +288,43 @@ def get_device_name(device: Device, parent: Device | None = None) -> str | None:
     return None
 
 
+# --- KLAP v2 workaround: persist credentials across restarts ---------------
+# Stock HA keeps the cloud credentials only in hass.data (memory) and relies on
+# the per-entry credentials_hash for reconnects. That works for KLAP v1, but the
+# KLAP v2 (new_klap) fallback in the vendored python-kasa only fires when REAL
+# credentials are present — a hash-only reconnect can't do v2. So after any HA
+# restart the v2 devices would fail auth. We persist the credentials to HA's
+# standard Store so get_credentials() can return them after a restart, making the
+# real-credential v2 path fire on every reconnect. Remove with the rest of this
+# custom component once upstream python-kasa ships KLAP v2 support.
+_CREDS_STORE_VERSION = 1
+_CREDS_STORE_KEY = f"{DOMAIN}_klapv2_credentials"
+
+
 async def get_credentials(hass: HomeAssistant) -> Credentials | None:
-    """Retrieve the credentials from hass data."""
+    """Retrieve the credentials from hass data, falling back to persisted store."""
     if DOMAIN in hass.data and CONF_AUTHENTICATION in hass.data[DOMAIN]:
         auth = hass.data[DOMAIN][CONF_AUTHENTICATION]
         return Credentials(auth[CONF_USERNAME], auth[CONF_PASSWORD])
+
+    store: Store[dict[str, str]] = Store(
+        hass, _CREDS_STORE_VERSION, _CREDS_STORE_KEY
+    )
+    if (data := await store.async_load()) and data.get(CONF_USERNAME):
+        hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = data
+        return Credentials(data[CONF_USERNAME], data[CONF_PASSWORD])
 
     return None
 
 
 async def set_credentials(hass: HomeAssistant, username: str, password: str) -> None:
-    """Save the credentials to HASS data."""
-    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = {
-        CONF_USERNAME: username,
-        CONF_PASSWORD: password,
-    }
+    """Save the credentials to HASS data and persist them across restarts."""
+    auth = {CONF_USERNAME: username, CONF_PASSWORD: password}
+    hass.data.setdefault(DOMAIN, {})[CONF_AUTHENTICATION] = auth
+    store: Store[dict[str, str]] = Store(
+        hass, _CREDS_STORE_VERSION, _CREDS_STORE_KEY
+    )
+    await store.async_save(auth)
 
 
 def mac_alias(mac: str) -> str:

@@ -104,9 +104,10 @@ async def _connect(config: DeviceConfig, protocol: BaseProtocol) -> Device:
     device_class: type[Device] | None
     device: Device | None = None
 
-    if isinstance(protocol, IotProtocol) and isinstance(
-        protocol._transport, XorTransport
-    ):
+    if isinstance(protocol, IotProtocol) and config.connection_type.device_family in {
+        DeviceFamily.IotSmartPlugSwitch,
+        DeviceFamily.IotSmartBulb,
+    }:
         info = await protocol.query(GET_SYSINFO_QUERY)
         _perf_log(True, "get_sysinfo")
         device_class = get_device_class_from_sys_info(info)

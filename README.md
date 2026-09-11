@@ -22,8 +22,9 @@ Tracking issues: [python-kasa#1604](https://github.com/python-kasa/python-kasa/i
 - The **`tplink` integration from HA core 2026.9.0** (Apache-2.0), installed
   as a custom component so it shadows the built-in one.
 - A **vendored python-kasa built from PR #1625** (commit `dd92c05`, GPL-3.0)
-  under `_vendor/`, plus a tiny `sys.path` shim (`_patched_kasa.py`) imported
-  first so the integration uses it instead of the image's 0.10.2.
+  plus the minimal IOT KLAP class-detection fix from PR #1692 (commit
+  `8b1f6b8`), under `_vendor/`. A tiny `sys.path` shim (`_patched_kasa.py`)
+  loads it before the image's 0.10.2.
 - The credential-persistence change documented below. Stored config-entry
   credentials work as-is after a restart; no re-auth is needed if the
   credentials were already correct.
@@ -43,11 +44,16 @@ integration.
 
 ## Known limitations
 
-- IOT strips on new_klap firmware (KP303/HS300/KP400) may be misdetected as
-  single plugs by the PR-branch library (upstream bug, present in #1625 and
-  #1692). Single plugs (HS103 etc.) are unaffected.
 - HA-side integration code is pinned to Core 2026.9.0. A future HA core update
   may drift; re-sync the integration files if entities break after a core update.
+
+## v2026.9.0.2 — new_klap power-strip detection
+
+Backports only the device-class selection part of python-kasa PR #1692.
+IOT KLAP plug families now query `system.get_sysinfo` during connection, so
+KP303/HS300 devices with child outlets instantiate as `IotStrip` instead of a
+single `IotPlug`. The existing KLAP v2 transport and credential workaround are
+unchanged; no unrelated unreleased python-kasa changes are included.
 
 ## v2026.9.0.1 — Home Assistant 2026.9 compatibility
 

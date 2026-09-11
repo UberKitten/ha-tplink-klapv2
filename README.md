@@ -19,13 +19,14 @@ Tracking issues: [python-kasa#1604](https://github.com/python-kasa/python-kasa/i
 
 ## What this is
 
-- The **unmodified `tplink` integration from HA core 2026.7.0** (Apache-2.0),
-  installed as a custom component so it shadows the built-in one.
+- The **`tplink` integration from HA core 2026.9.0** (Apache-2.0), installed
+  as a custom component so it shadows the built-in one.
 - A **vendored python-kasa built from PR #1625** (commit `dd92c05`, GPL-3.0)
   under `_vendor/`, plus a tiny `sys.path` shim (`_patched_kasa.py`) imported
   first so the integration uses it instead of the image's 0.10.2.
-- Nothing else is changed. Stored config-entry credentials work as-is after a
-  restart — no re-auth needed if your credentials were already correct.
+- The credential-persistence change documented below. Stored config-entry
+  credentials work as-is after a restart; no re-auth is needed if the
+  credentials were already correct.
 
 Why not a manifest `requirements` override? python-kasa 0.10.2 is baked into
 the HA container image, so HA treats any URL requirement for the same package
@@ -45,9 +46,15 @@ integration.
 - IOT strips on new_klap firmware (KP303/HS300/KP400) may be misdetected as
   single plugs by the PR-branch library (upstream bug, present in #1625 and
   #1692). Single plugs (HS103 etc.) are unaffected.
-- Pinned to HA core 2026.7.0's integration code. A future HA core update may
-  drift; re-sync the integration files if entities break after a core update.
+- HA-side integration code is pinned to Core 2026.9.0. A future HA core update
+  may drift; re-sync the integration files if entities break after a core update.
 
+## v2026.9.0.1 — Home Assistant 2026.9 compatibility
+
+The HA-side integration code is synchronized to Home Assistant Core 2026.9.0
+while retaining the vendored KLAP v2 library and credential persistence.
+This removes the obsolete `VacuumEntityFeature.BATTERY` API and includes Core's
+parent/child device-registry fixes from commits `66fffd6` and `83ffb40`.
 
 ## v2026.7.0.1 — survives restarts
 
